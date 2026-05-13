@@ -19,6 +19,7 @@ help:
 	@echo "  make evaluate    Evaluate models and save production artifact"
 	@echo "  make score       Score transactions with production model"
 	@echo "  make review-queue  Build capacity-constrained review queue"
+	@echo "  make monitor     Run monitoring reports (drift + performance)"
 	@echo ""
 	@echo "Utility:"
 	@echo "  make clean       Remove generated database and reports"
@@ -57,6 +58,10 @@ score:
 
 review-queue:
 	$(PYTHON) -m review.build_queue
+
+monitor:
+	$(PYTHON) -m monitoring.drift_detection
+	$(PYTHON) -m monitoring.performance_tracker
 
 clean:
 	rm -f data/fraud_risk.db artifacts/reports/*.json artifacts/models/*.pkl
