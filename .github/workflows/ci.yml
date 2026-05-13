@@ -136,8 +136,9 @@ jobs:
         # Check that reports were generated
         test -f artifacts/reports/feature_stats.json || exit 1
         test -f artifacts/reports/training_report_v1.json || exit 1
-        test -f artifacts/reports/scoring_report.json || exit 1
-        test -f artifacts/reports/review_queue_report.json || exit 1
+        # report filenames come from scripts: scoring_stats.json and review_queue_stats.json
+        test -f artifacts/reports/scoring_stats.json || exit 1
+        test -f artifacts/reports/review_queue_stats.json || exit 1
         
         echo "✅ All demo outputs verified successfully"
     
@@ -176,7 +177,12 @@ jobs:
     
     - name: Initialize database
       run: |
+        # Initialize database and generate baseline data required by failure injections
         python simulation/init_db.py
+        # Generate a small synthetic dataset for injection scenarios
+        python -m simulation.generate_transactions --num-transactions 1000 --fraud-rate 0.02
+        python -m simulation.generate_labels
+        python -m features.build_features
     
     - name: Run failure scenario - ${{ matrix.scenario }}
       run: |
