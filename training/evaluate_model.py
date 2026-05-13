@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pandas as pd
 
+from fraud_risk.config import MATURE_LABEL_AGE_DAYS
 from training.common import (
     FEATURE_COLUMNS,
     MODEL_SPECS,
-    MATURE_LABEL_DAYS,
     build_dataset_summary,
     build_split_summary,
     deserialize_model,
@@ -27,7 +27,7 @@ from training.common import (
 )
 
 
-def evaluate_models(db_path: str = "data/fraud_risk.db", maturity_days: int = MATURE_LABEL_DAYS) -> dict:
+def evaluate_models(db_path: str = "data/fraud_risk.db", maturity_days: int = MATURE_LABEL_AGE_DAYS) -> dict:
     ensure_directories()
     frame = load_training_frame(db_path=db_path, maturity_days=maturity_days)
     train_frame, validation_frame, test_frame = split_temporally(frame)
@@ -101,7 +101,7 @@ def evaluate_models(db_path: str = "data/fraud_risk.db", maturity_days: int = MA
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate fraud detection models.")
     parser.add_argument("--db-path", default="data/fraud_risk.db", help="Path to the SQLite database file")
-    parser.add_argument("--maturity-days", type=int, default=MATURE_LABEL_DAYS, help="Minimum label maturity in days")
+    parser.add_argument("--maturity-days", type=int, default=MATURE_LABEL_AGE_DAYS, help="Minimum label maturity in days")
     return parser.parse_args()
 
 

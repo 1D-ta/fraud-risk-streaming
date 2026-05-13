@@ -14,7 +14,7 @@ import pandas as pd
 if __package__ in {None, ""}:
     sys.path.append(str(Path(__file__).resolve().parents[2]))
 
-from fraud_risk.failure_injection import write_report
+from fraud_risk.failure_injection import write_report, write_incident_report
 
 
 def inject_label_delay_spike(db_path: str = "data/fraud_risk.db", seed: int = 42) -> dict:
@@ -68,6 +68,7 @@ def inject_label_delay_spike(db_path: str = "data/fraud_risk.db", seed: int = 42
     }
 
     write_report("failure_label_delay.json", report)
+    write_incident_report("label_delay", report)
     return report
 
 

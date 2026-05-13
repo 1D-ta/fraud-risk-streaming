@@ -1,6 +1,6 @@
 PYTHON := .venv/bin/python
 
-.PHONY: help setup init-db simulate backfill-labels analyze-maturity build-features check-leakage train evaluate score review-queue monitor demo inject-failure clean
+.PHONY: help setup init-db simulate backfill-labels analyze-maturity build-features check-leakage train evaluate score review-queue monitor demo inject-failure test clean
 
 help:
 	@echo "Fraud Risk Streaming - Makefile Commands"
@@ -22,6 +22,9 @@ help:
 	@echo "  make monitor     Run monitoring reports (drift + performance)"
 	@echo "  make demo        Run the end-to-end demo pipeline"
 	@echo "  make inject-failure SCENARIO=...  Run a failure injection scenario"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test        Run all unit tests with pytest"
 	@echo ""
 	@echo "Utility:"
 	@echo "  make clean       Remove generated database and reports"
@@ -80,6 +83,9 @@ inject-failure:
 		leakage) $(PYTHON) scripts/failure_injection/inject_leakage.py ;; \
 		*) echo "Unknown SCENARIO=$(SCENARIO)"; exit 1 ;; \
 	esac
+
+test:
+	$(PYTHON) -m pytest tests/ -v --tb=short
 
 clean:
 	rm -f data/fraud_risk.db artifacts/reports/*.json artifacts/reports/*.html artifacts/models/*.pkl

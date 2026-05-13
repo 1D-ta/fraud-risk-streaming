@@ -12,7 +12,7 @@ import pandas as pd
 if __package__ in {None, ""}:
     sys.path.append(str(Path(__file__).resolve().parents[2]))
 
-from fraud_risk.failure_injection import write_report
+from fraud_risk.failure_injection import write_report, write_incident_report
 
 
 def _ensure_future_fraud_column(connection: sqlite3.Connection) -> None:
@@ -70,6 +70,7 @@ def inject_leakage_bug(db_path: str = "data/fraud_risk.db") -> dict:
     }
 
     write_report("failure_leakage.json", report)
+    write_incident_report("leakage", report)
     return report
 
 

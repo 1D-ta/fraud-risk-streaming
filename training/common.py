@@ -60,7 +60,7 @@ def ensure_directories() -> None:
     Path("artifacts/reports").mkdir(parents=True, exist_ok=True)
 
 
-def load_training_frame(db_path: str, maturity_days: int = MATURE_LABEL_DAYS) -> pd.DataFrame:
+def load_training_frame(db_path: str, maturity_days: int = MATURE_LABEL_AGE_DAYS) -> pd.DataFrame:
     with sqlite3.connect(db_path) as connection:
         frame = pd.read_sql_query(
             """

@@ -12,7 +12,7 @@ import pandas as pd
 if __package__ in {None, ""}:
     sys.path.append(str(Path(__file__).resolve().parents[2]))
 
-from fraud_risk.failure_injection import write_report
+from fraud_risk.failure_injection import write_report, write_incident_report
 
 
 def inject_distribution_shift(db_path: str = "data/fraud_risk.db", amount_multiplier: float = 10.0) -> dict:
@@ -115,6 +115,7 @@ def inject_distribution_shift(db_path: str = "data/fraud_risk.db", amount_multip
     }
 
     write_report("failure_distribution_shift.json", report)
+    write_incident_report("distribution_shift", report)
     return report
 
 
