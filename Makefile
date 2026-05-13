@@ -1,6 +1,6 @@
 PYTHON := .venv/bin/python
 
-.PHONY: help setup init-db simulate backfill-labels analyze-maturity clean
+.PHONY: help setup init-db simulate backfill-labels analyze-maturity build-features check-leakage clean
 
 help:
 	@echo "Fraud Risk Streaming - Makefile Commands"
@@ -13,6 +13,8 @@ help:
 	@echo "  make simulate    Generate synthetic transactions"
 	@echo "  make backfill-labels  Generate delayed fraud labels"
 	@echo "  make analyze-maturity  Analyze label maturity"
+	@echo "  make build-features  Build event-time features"
+	@echo "  make check-leakage  Verify feature temporal correctness"
 	@echo ""
 	@echo "Utility:"
 	@echo "  make clean       Remove generated database and reports"
@@ -33,6 +35,12 @@ backfill-labels:
 
 analyze-maturity:
 	$(PYTHON) -m simulation.analyze_maturity
+
+build-features:
+	$(PYTHON) -m features.build_features
+
+check-leakage:
+	$(PYTHON) -m features.check_leakage
 
 clean:
 	rm -f data/fraud_risk.db artifacts/reports/*.json
