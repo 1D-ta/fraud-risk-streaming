@@ -1,4 +1,4 @@
-# Fraud Risk Streaming: Engineering Design
+# Fraud Risk Scoring Pipeline: Engineering Design
 
 ## Problem Statement
 
@@ -17,6 +17,7 @@ The pipeline is intentionally simple: one SQLite database, scikit-learn models, 
 - The review queue is capacity constrained at 500 cases per batch, and the top-k reporting slice is 100.
 - Evaluation reports PR-AUC, ROC-AUC, F1, precision@100, and recall@100; ROC-AUC can look strong on synthetic data and should not be treated as a production benchmark.
 - Leakage prevention is enforced by checking that feature timestamps do not exceed transaction timestamps.
+- The same event-time joins would map to a stream processor in production, but the repository intentionally keeps the implementation local and inspectable.
 
 ## Failure Modes
 

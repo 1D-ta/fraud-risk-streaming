@@ -25,10 +25,10 @@ Maturity analysis shows a sharp drop in mature labels
 ## Impact
 
 **Quantitative Impact**:
-- Affected Labels: 1000
-- Extra Delay Days Added Mean: 10.559469190014635
-- Median Delay Hours: 472.74795025904564
-- P95 Delay Hours: 910.0024292613057
+- Affected Labels: 25000
+- Extra Delay Days Added Mean: 10.513109568490108
+- Median Delay Hours: 204.22135940830128
+- P95 Delay Hours: 447.4717075247361
 
 **Business Impact**:
 Training data shrinks and recall drops

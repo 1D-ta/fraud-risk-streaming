@@ -1,4 +1,4 @@
-# Incident Reports: Fraud Risk Streaming
+# Incident Reports: Fraud Risk Scoring Pipeline
 
 These incidents are simulated through the failure-injection scripts. They document failure modes the code can actually reproduce.
 
@@ -12,6 +12,13 @@ Roughly half of the labels moved beyond the 7-day maturity window, and the matur
 
 ### Detection
 The label maturity report used in the injection path showed the delay distribution shifting into the multi-week range and the mature-label rate dropping.
+
+### Evidence
+```text
+Injected label delay spike
+Affected labels: 25000
+Median delay: 8.51 days
+```
 
 ### Impact
 `training/evaluate_model.py` filtered out more recent rows, so the model trained on a smaller and older sample. That reduces how quickly new fraud patterns can be learned.
@@ -33,6 +40,13 @@ Newest transactions have zeroed velocity features because the feature pipeline l
 ### Detection
 Feature freshness monitoring shows old feature timestamps. Affected transactions lack recent aggregates.
 
+### Evidence
+```text
+Injected feature lag
+Affected transactions: 5026
+Lag days: 3
+```
+
 ### Impact
 Recent fraud is under-scored because velocity-based signals are stale. Model recall drops on newest transactions.
 
@@ -53,6 +67,13 @@ Recent transaction amounts moved about 10x above the baseline distribution, whic
 ### Detection
 `monitoring/drift_detection.py` reports PSI on feature columns and scores, so the amount-sensitive features showed a clear drift spike.
 
+### Evidence
+```text
+Injected distribution shift
+Affected transactions: 200
+Amount multiplier: 10.0x
+```
+
 ### Impact
 `review.build_queue.py` filled the 500-case manual review cap more quickly and overflowed the lower-scored tail. That increases false positives in the queue.
 
@@ -72,6 +93,13 @@ Some feature timestamps were later than the transaction timestamps, which can ma
 
 ### Detection
 `features/check_leakage.py` fails when it finds any row where `feature_timestamp > transaction_timestamp`.
+
+### Evidence
+```text
+Injected leakage bug
+Affected transactions: 50000
+Max future fraud count: 87
+```
 
 ### Impact
 The affected dataset is invalid for training and scoring. Any model trained on it would overstate offline quality and underperform in production.

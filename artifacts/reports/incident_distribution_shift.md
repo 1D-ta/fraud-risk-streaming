@@ -25,7 +25,7 @@ Drift monitoring shows PSI spikes on amount-sensitive features
 ## Impact
 
 **Quantitative Impact**:
-- Affected Transactions: 400
+- Affected Transactions: 200
 - Amount Multiplier: 10.0
 
 **Business Impact**:

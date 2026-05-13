@@ -25,7 +25,7 @@ Feature freshness monitoring shows old feature timestamps
 ## Impact
 
 **Quantitative Impact**:
-- Affected Transactions: 89
+- Affected Transactions: 5026
 - Lag Days: 3
 
 **Business Impact**:

@@ -25,8 +25,8 @@ Leakage checks and production monitoring disagree
 ## Impact
 
 **Quantitative Impact**:
-- Affected Transactions: 2000
-- Max Future Fraud Count: 1
+- Affected Transactions: 50000
+- Max Future Fraud Count: 87
 
 **Business Impact**:
 The model looks great offline and fails in production
