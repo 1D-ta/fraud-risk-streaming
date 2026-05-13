@@ -1,6 +1,6 @@
 PYTHON := .venv/bin/python
 
-.PHONY: help setup init-db simulate backfill-labels analyze-maturity build-features check-leakage train evaluate score review-queue clean
+.PHONY: help setup init-db simulate backfill-labels analyze-maturity build-features check-leakage train evaluate score review-queue monitor demo inject-failure clean
 
 help:
 	@echo "Fraud Risk Streaming - Makefile Commands"
@@ -20,6 +20,8 @@ help:
 	@echo "  make score       Score transactions with production model"
 	@echo "  make review-queue  Build capacity-constrained review queue"
 	@echo "  make monitor     Run monitoring reports (drift + performance)"
+	@echo "  make demo        Run the end-to-end demo pipeline"
+	@echo "  make inject-failure SCENARIO=...  Run a failure injection scenario"
 	@echo ""
 	@echo "Utility:"
 	@echo "  make clean       Remove generated database and reports"
@@ -63,5 +65,21 @@ monitor:
 	$(PYTHON) -m monitoring.drift_detection
 	$(PYTHON) -m monitoring.performance_tracker
 
+demo:
+	$(PYTHON) scripts/demo.py
+
+inject-failure:
+	@if [ -z "$(SCENARIO)" ]; then \
+		echo "Set SCENARIO=label_delay|feature_lag|distribution_shift|leakage"; \
+		exit 1; \
+	fi
+	@case "$(SCENARIO)" in \
+		label_delay) $(PYTHON) scripts/failure_injection/inject_label_delay.py ;; \
+		feature_lag) $(PYTHON) scripts/failure_injection/inject_feature_lag.py ;; \
+		distribution_shift) $(PYTHON) scripts/failure_injection/inject_distribution_shift.py ;; \
+		leakage) $(PYTHON) scripts/failure_injection/inject_leakage.py ;; \
+		*) echo "Unknown SCENARIO=$(SCENARIO)"; exit 1 ;; \
+	esac
+
 clean:
-	rm -f data/fraud_risk.db artifacts/reports/*.json artifacts/models/*.pkl
+	rm -f data/fraud_risk.db artifacts/reports/*.json artifacts/reports/*.html artifacts/models/*.pkl

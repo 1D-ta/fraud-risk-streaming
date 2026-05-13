@@ -1,0 +1,1 @@
+"""Failure injection scenarios for fraud-risk-streaming."""

@@ -423,15 +423,15 @@ fraud-risk-streaming/
 
 **Goal:** Production readiness and handoff
 
-- [ ] Comprehensive testing
+- [x] Comprehensive testing
   - Unit tests for all components
   - Integration tests (end-to-end)
   - Failure injection tests
-- [ ] Documentation completion
+- [x] Documentation completion
   - API documentation
   - Deployment guide
   - Troubleshooting guide
-- [ ] Demo preparation
+- [x] Demo preparation
   - Sample transactions
   - Walkthrough script
   - Performance benchmarks
@@ -457,6 +457,8 @@ fraud-risk-streaming/
 - [x] Day 3 event-time feature engineering implemented
 - [x] Day 4 training pipeline implemented
 - [x] Day 5 scoring and review queue implemented
+- [x] Day 6 monitoring and drift detection implemented
+- [x] Day 7 testing, docs, demo, and failure injection implemented
 
 ### 🚧 In Progress
 
@@ -464,13 +466,13 @@ fraud-risk-streaming/
 
 ### 📋 Next Up
 
-- [ ] Add monitoring and drift detection
-- [ ] Add performance tracking and drift alerts
-- [ ] Add review queue observability
+- [ ] Extend the demo with charts or screenshots if needed
+- [ ] Add more failure scenarios as the system evolves
+- [ ] Port the pipeline to a service-based deployment if required
 
 ### 🎯 Milestone Progress
 
-**MVP Progress: 71% Complete** (Day 5 of 7)
+**MVP Progress: 100% Complete** (Day 7 of 7)
 
 ---
 
@@ -479,9 +481,9 @@ fraud-risk-streaming/
 ### Immediate Actions (Start Here)
 
 1. **Review this guide thoroughly** - Understand the problem and architecture
-2. **Read PRD.md** - Understand product requirements
-3. **Read SCHEMA_SPEC.md** - Understand database design
-4. **Start Day 1 tasks** - Begin with transaction simulator
+2. **Read README.md** - Follow the concise project overview and commands
+3. **Read docs/DEPLOYMENT.md** - See the supported setup and execution flow
+4. **Run make demo** - Reproduce the end-to-end pipeline locally
 
 ### Development Workflow
 
@@ -491,20 +493,14 @@ python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 2. Run simulation
-python -m simulation.transaction_generator --num-transactions 10000
+# 2. Run the full demo
+make demo
 
-# 3. Compute features
-python -m features.compute_features
-
-# 4. Train model
-python -m training.train_model
-
-# 5. Score transactions
-python -m scoring.score_transaction --transaction-id txn_12345
-
-# 6. Monitor model
+# 3. Run monitoring directly
 python -m monitoring.drift_detection
+
+# 4. Inject a failure scenario
+make inject-failure SCENARIO=label_delay
 ```
 
 ### Key Files to Create Next

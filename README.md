@@ -1,39 +1,68 @@
 # Fraud Risk Streaming
 
-A real-time fraud detection system with delayed label handling and event-time correctness.
+A production-style fraud detection pipeline that handles delayed labels, enforces event-time correctness, and routes high-risk transactions into a capacity-constrained review queue.
 
-## 📖 Getting Started
+Start with [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md), which now acts as the main handoff document for the completed day 1-7 build.
 
-**For a comprehensive understanding of this project, please read:**
+## Quick Start
 
-👉 **[docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md)** 👈
+```bash
+make setup
+make init-db
+make simulate
+make backfill-labels
+make build-features
+make train
+make evaluate
+make score
+make review-queue
+make monitor
+```
 
-This guide contains:
-- Complete project overview and objectives
-- Architecture and design principles
-- Technical challenges and solutions
-- 7-day MVP implementation plan
-- How to continue development
+For a single end-to-end run, use:
 
-## Quick Links
+```bash
+make demo
+```
 
-- [Project Guide](docs/PROJECT_GUIDE.md) - **START HERE**
-- [PRD](docs/PRD.md) - Product Requirements Document
-- [Architecture](docs/ARCHITECTURE.md) - System Architecture
-- [Day-by-Day Plan](docs/DAY_BY_DAY_PLAN.md) - Implementation Timeline
-- [Schema Specification](docs/SCHEMA_SPEC.md) - Data Schemas
-- [Makefile Specification](docs/MAKEFILE_SPEC.md) - Build Commands
+## What This Project Demonstrates
 
-## Project Status
+- Delayed fraud label handling with maturity-aware training windows
+- Event-time-safe feature engineering and leakage checks
+- Scoring with ranked review queue routing
+- Drift and performance monitoring with a dashboard artifact
+- Failure injection for label delay, feature lag, distribution shift, and leakage
 
-🚧 **In Development** - See PROJECT_GUIDE.md for current status and next steps.
+## Key Commands
+
+- `make demo` - Run the full pipeline and write `artifacts/reports/demo_summary.json`
+- `make monitor` - Write `artifacts/reports/drift_report.json`, `artifacts/reports/performance_metrics.json`, and `artifacts/reports/monitoring_dashboard.html`
+- `make inject-failure SCENARIO=label_delay|feature_lag|distribution_shift|leakage` - Reproduce the documented incident scenarios
+
+## Documentation
+
+- [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md)
+- [docs/PRD.md](docs/PRD.md)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/API.md](docs/API.md)
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- [INCIDENTS.md](INCIDENTS.md)
+
+## Testing
+
+```bash
+./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+```
 
 ## Technology Stack
 
-- **Language:** Python 3.9+
-- **Database:** SQLite (event-time correctness)
-- **ML Framework:** scikit-learn
-- **Streaming:** Custom event-time processing
+- Python 3.9+
+- SQLite for durable local persistence and event-time queries
+- pandas, NumPy, and scikit-learn for the pipeline and model training
+
+## Status
+
+The day 7 polish pass is complete: documentation, demo, and failure injection are now implemented and covered by tests.
 
 ## License
 
