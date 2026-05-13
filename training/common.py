@@ -24,7 +24,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
 
-from fraud_risk.config import FEATURE_COLUMNS, MATURE_LABEL_AGE_DAYS as MATURE_LABEL_DAYS, TOP_K_REVIEW, TRAIN_FRACTION, VALIDATION_FRACTION
+from fraud_risk.config import FEATURE_COLUMNS, MATURE_LABEL_AGE_DAYS, TOP_K_REVIEW, TRAIN_FRACTION, VALIDATION_FRACTION
 
 
 @dataclass(frozen=True)
@@ -108,12 +108,17 @@ def split_temporally(frame: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, p
         raise ValueError("Need at least three rows to create train, validation, and test splits.")
 
     positive_positions = np.flatnonzero(frame["is_fraud"].to_numpy(dtype=int) == 1)
-    if len(positive_positions) >= 1:
-        train_end = max(1, int(positive_positions[0]) + 1)
-        if len(positive_positions) >= 2:
-            validation_end = max(train_end + 1, int(positive_positions[1]) + 1)
-        else:
-            validation_end = max(train_end + 1, int(len(frame) * (TRAIN_FRACTION + VALIDATION_FRACTION)))
+    if len(positive_positions) >= 3:
+        train_positive_index = max(0, int(len(positive_positions) * 0.60) - 1)
+        validation_positive_index = max(train_positive_index + 1, int(len(positive_positions) * 0.80) - 1)
+
+        if validation_positive_index >= len(positive_positions):
+            validation_positive_index = len(positive_positions) - 1
+        if train_positive_index >= validation_positive_index:
+            train_positive_index = max(0, validation_positive_index - 1)
+
+        train_end = int(positive_positions[train_positive_index]) + 1
+        validation_end = int(positive_positions[validation_positive_index]) + 1
     else:
         train_end = max(1, int(len(frame) * TRAIN_FRACTION))
         validation_end = max(train_end + 1, int(len(frame) * (TRAIN_FRACTION + VALIDATION_FRACTION)))
