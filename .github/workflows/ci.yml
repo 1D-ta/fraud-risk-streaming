@@ -114,7 +114,12 @@ jobs:
     
     - name: Initialize database
       run: |
+        # Initialize database and generate baseline data required by failure injections
         python simulation/init_db.py
+        # Generate a small synthetic dataset for injection scenarios
+        python -m simulation.generate_transactions --num-transactions 1000 --fraud-rate 0.02
+        python -m simulation.generate_labels
+        python -m features.build_features
     
     - name: Run demo pipeline
       run: |
