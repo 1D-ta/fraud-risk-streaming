@@ -31,17 +31,17 @@ class FeatureEngineeringTests(TestCase):
                     """
                 ).fetchone()[0]
                 feature_frame = connection.execute(
-                    "SELECT user_txn_count_24h, user_amount_sum_7d, merchant_fraud_rate_30d, amount_zscore, hour_of_day, is_first_merchant FROM features"
+                    "SELECT user_txn_count_1h, user_txn_count_24h, user_avg_amount_7d, user_amount_zscore_7d, user_unique_merchants_24h, merchant_txn_count_1h, device_user_count_24h, is_new_device_for_user, city_change_flag_24h, amount, hour_of_day, is_weekend, is_international FROM features"
                 ).fetchall()
 
             self.assertEqual(count, 1_000)
             self.assertEqual(report["n_features"], 1_000)
             self.assertEqual(leakage_violations, 0)
-            self.assertTrue(all(0 <= row[4] <= 23 for row in feature_frame))
-            self.assertTrue(all(row[5] in (0, 1) for row in feature_frame))
+            self.assertTrue(all(0 <= row[10] <= 23 for row in feature_frame))
+            self.assertTrue(all(row[7] in (0, 1) for row in feature_frame))
             self.assertTrue(all(row[0] >= 0 for row in feature_frame))
             self.assertTrue(all(row[1] >= 0 for row in feature_frame))
-            self.assertTrue(all(0.0 <= row[2] <= 1.0 for row in feature_frame))
+            self.assertTrue(all(row[2] >= 0 for row in feature_frame))
 
     def test_check_leakage_writes_pass_report(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

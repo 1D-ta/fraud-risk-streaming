@@ -25,6 +25,8 @@
 
 **Fraud Risk Streaming** is a production-grade fraud detection system designed to solve real-world challenges in financial transaction monitoring. Unlike typical ML projects, this system addresses three critical problems that make fraud detection uniquely difficult:
 
+Implementation note: the restored codebase uses a richer transaction schema, 13 event-time features, and centralized helpers in `fraud_risk/` for config, db access, and time utilities.
+
 1. **Delayed Labels** - Fraud labels arrive hours or days after transactions
 2. **Event-Time Correctness** - Features must reflect what was known at transaction time
 3. **Review Capacity Constraints** - Human reviewers can only check a limited number of transactions
@@ -157,43 +159,70 @@ user_fraud_rate = frauds_before_event_time / transactions_before_event_time
 ### Database Schema (Event-Time Correctness)
 
 ```sql
--- Core transaction data
 CREATE TABLE transactions (
-    transaction_id TEXT PRIMARY KEY,
-    event_time TIMESTAMP NOT NULL,  -- When transaction occurred
-    user_id TEXT NOT NULL,
-    amount REAL NOT NULL,
-    merchant_category TEXT,
-    -- ... other transaction fields
-    INDEX idx_event_time (event_time),
-    INDEX idx_user_event (user_id, event_time)
+  transaction_id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  merchant_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  timestamp TEXT NOT NULL,
+  amount REAL NOT NULL CHECK (amount > 0),
+  currency TEXT NOT NULL,
+  merchant_category TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  location_city TEXT NOT NULL,
+  is_international INTEGER NOT NULL,
+  fraud_pattern TEXT
 );
 
--- Delayed fraud labels
 CREATE TABLE labels (
-    transaction_id TEXT PRIMARY KEY,
-    label_time TIMESTAMP NOT NULL,  -- When fraud was confirmed
-    is_fraud INTEGER NOT NULL,      -- 0 or 1
-    FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id)
+  transaction_id TEXT PRIMARY KEY,
+  label_timestamp TEXT NOT NULL,
+  is_fraud INTEGER NOT NULL,
+  label_source TEXT NOT NULL,
+  label_delay_hours REAL NOT NULL,
+  is_mature INTEGER NOT NULL,
+  FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id)
 );
 
--- Pre-computed features (event-time safe)
 CREATE TABLE features (
-    transaction_id TEXT PRIMARY KEY,
-    computed_at TIMESTAMP NOT NULL,  -- Must equal event_time
-    user_transaction_count_30d INTEGER,
-    user_fraud_rate_30d REAL,
-    -- ... other features
-    FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id)
+  transaction_id TEXT PRIMARY KEY,
+  feature_timestamp TEXT NOT NULL,
+  user_txn_count_1h INTEGER NOT NULL,
+  user_txn_count_24h INTEGER NOT NULL,
+  user_avg_amount_7d REAL NOT NULL,
+  user_amount_zscore_7d REAL NOT NULL,
+  user_unique_merchants_24h INTEGER NOT NULL,
+  merchant_txn_count_1h INTEGER NOT NULL,
+  device_user_count_24h INTEGER NOT NULL,
+  is_new_device_for_user INTEGER NOT NULL,
+  city_change_flag_24h INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  hour_of_day INTEGER NOT NULL,
+  is_weekend INTEGER NOT NULL,
+  is_international INTEGER NOT NULL,
+  FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id)
 );
 
--- Model predictions
-CREATE TABLE predictions (
-    transaction_id TEXT PRIMARY KEY,
-    model_version TEXT NOT NULL,
-    fraud_score REAL NOT NULL,
-    prediction_time TIMESTAMP NOT NULL,
-    routed_to_review INTEGER NOT NULL
+CREATE TABLE scores (
+  transaction_id TEXT PRIMARY KEY,
+  score_timestamp TEXT NOT NULL,
+  fraud_score REAL NOT NULL,
+  risk_band TEXT NOT NULL,
+  decision TEXT NOT NULL,
+  reason_codes TEXT NOT NULL,
+  model_version TEXT NOT NULL,
+  FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id)
+);
+
+CREATE TABLE review_queue (
+  review_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  transaction_id TEXT NOT NULL,
+  review_batch_id TEXT NOT NULL,
+  fraud_score REAL NOT NULL,
+  review_rank INTEGER NOT NULL,
+  decision TEXT NOT NULL,
+  capacity_limit INTEGER NOT NULL,
+  FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id)
 );
 ```
 

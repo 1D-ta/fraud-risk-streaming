@@ -16,19 +16,19 @@ def analyze_maturity(db_path: str = "data/fraud_risk.db", maturity_days: int = 7
 
     with sqlite3.connect(db_path) as connection:
         current_date_raw = pd.read_sql_query(
-            "SELECT MAX(timestamp) AS max_ts FROM transactions",
+            "SELECT MAX(label_timestamp) AS max_ts FROM labels",
             connection,
         )["max_ts"].iloc[0]
 
         if current_date_raw is None:
-            raise ValueError("No transactions found. Run the transaction generator first.")
+            raise ValueError("No labels found. Run the label generator first.")
 
         current_date = datetime.fromisoformat(current_date_raw)
-        maturity_query = f"""
+        maturity_query = """
         SELECT
             COUNT(*) AS total_transactions,
-            SUM(CASE WHEN julianday('{current_date.isoformat()}') - julianday(t.timestamp) > {maturity_days} THEN 1 ELSE 0 END) AS mature_transactions,
-            SUM(CASE WHEN julianday('{current_date.isoformat()}') - julianday(t.timestamp) > {maturity_days} AND l.is_fraud = 1 THEN 1 ELSE 0 END) AS mature_fraud
+            SUM(CASE WHEN l.is_mature = 1 THEN 1 ELSE 0 END) AS mature_transactions,
+            SUM(CASE WHEN l.is_mature = 1 AND l.is_fraud = 1 THEN 1 ELSE 0 END) AS mature_fraud
         FROM transactions t
         JOIN labels l ON t.transaction_id = l.transaction_id
         """

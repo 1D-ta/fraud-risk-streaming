@@ -22,9 +22,12 @@ def inject_feature_lag(db_path: str = "data/fraud_risk.db", lag_days: int = 3) -
         frame = pd.read_sql_query(
             """
             SELECT f.transaction_id, t.timestamp, f.feature_timestamp,
-                   f.user_txn_count_24h, f.user_amount_sum_7d,
-                   f.merchant_fraud_rate_30d, f.amount_zscore,
-                   f.hour_of_day, f.is_first_merchant
+                 f.user_txn_count_1h, f.user_txn_count_24h,
+                 f.user_avg_amount_7d, f.user_amount_zscore_7d,
+                 f.user_unique_merchants_24h, f.merchant_txn_count_1h,
+                 f.device_user_count_24h, f.is_new_device_for_user,
+                 f.city_change_flag_24h, f.amount,
+                 f.hour_of_day, f.is_weekend, f.is_international
             FROM features f
             JOIN transactions t ON f.transaction_id = t.transaction_id
             ORDER BY t.timestamp, f.transaction_id
@@ -42,20 +45,32 @@ def inject_feature_lag(db_path: str = "data/fraud_risk.db", lag_days: int = 3) -
             affected = frame.tail(max(1, len(frame) // 10)).copy()
 
         affected["feature_timestamp"] = affected["timestamp"] - pd.to_timedelta(lag_days, unit="D")
+        affected["user_txn_count_1h"] = 0
         affected["user_txn_count_24h"] = 0
-        affected["user_amount_sum_7d"] = 0.0
-        affected["merchant_fraud_rate_30d"] = 0.0
-        affected["amount_zscore"] = 0.0
+        affected["user_avg_amount_7d"] = 0.0
+        affected["user_amount_zscore_7d"] = 0.0
+        affected["user_unique_merchants_24h"] = 0
+        affected["merchant_txn_count_1h"] = 0
+        affected["device_user_count_24h"] = 0
+        affected["is_new_device_for_user"] = 1
+        affected["city_change_flag_24h"] = 1
 
         update_rows = [
             (
                 row.feature_timestamp.to_pydatetime().replace(microsecond=0).isoformat(),
+                int(row.user_txn_count_1h),
                 int(row.user_txn_count_24h),
-                float(row.user_amount_sum_7d),
-                float(row.merchant_fraud_rate_30d),
-                float(row.amount_zscore),
+                float(row.user_avg_amount_7d),
+                float(row.user_amount_zscore_7d),
+                int(row.user_unique_merchants_24h),
+                int(row.merchant_txn_count_1h),
+                int(row.device_user_count_24h),
+                int(row.is_new_device_for_user),
+                int(row.city_change_flag_24h),
+                float(row.amount),
                 int(row.hour_of_day),
-                int(row.is_first_merchant),
+                int(row.is_weekend),
+                int(row.is_international),
                 row.transaction_id,
             )
             for row in affected.itertuples(index=False)
@@ -64,12 +79,19 @@ def inject_feature_lag(db_path: str = "data/fraud_risk.db", lag_days: int = 3) -
             """
             UPDATE features
             SET feature_timestamp = ?,
+                user_txn_count_1h = ?,
                 user_txn_count_24h = ?,
-                user_amount_sum_7d = ?,
-                merchant_fraud_rate_30d = ?,
-                amount_zscore = ?,
+                user_avg_amount_7d = ?,
+                user_amount_zscore_7d = ?,
+                user_unique_merchants_24h = ?,
+                merchant_txn_count_1h = ?,
+                device_user_count_24h = ?,
+                is_new_device_for_user = ?,
+                city_change_flag_24h = ?,
+                amount = ?,
                 hour_of_day = ?,
-                is_first_merchant = ?
+                is_weekend = ?,
+                is_international = ?
             WHERE transaction_id = ?
             """,
             update_rows,

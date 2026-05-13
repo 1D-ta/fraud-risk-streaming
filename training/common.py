@@ -24,20 +24,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
 
-
-FEATURE_COLUMNS = [
-    "user_txn_count_24h",
-    "user_amount_sum_7d",
-    "merchant_fraud_rate_30d",
-    "amount_zscore",
-    "hour_of_day",
-    "is_first_merchant",
-]
-
-MATURE_LABEL_DAYS = 7
-TRAIN_FRACTION = 0.70
-VALIDATION_FRACTION = 0.15
-TOP_K_REVIEW = 100
+from fraud_risk.config import FEATURE_COLUMNS, MATURE_LABEL_AGE_DAYS as MATURE_LABEL_DAYS, TOP_K_REVIEW, TRAIN_FRACTION, VALIDATION_FRACTION
 
 
 @dataclass(frozen=True)
@@ -85,17 +72,24 @@ def load_training_frame(db_path: str, maturity_days: int = MATURE_LABEL_DAYS) ->
                 t.transaction_id,
                 t.timestamp,
                 l.is_fraud,
+                f.user_txn_count_1h,
                 f.user_txn_count_24h,
-                f.user_amount_sum_7d,
-                f.merchant_fraud_rate_30d,
-                f.amount_zscore,
+                f.user_avg_amount_7d,
+                f.user_amount_zscore_7d,
+                f.user_unique_merchants_24h,
+                f.merchant_txn_count_1h,
+                f.device_user_count_24h,
+                f.is_new_device_for_user,
+                f.city_change_flag_24h,
+                f.amount,
                 f.hour_of_day,
-                f.is_first_merchant
+                f.is_weekend,
+                f.is_international
             FROM transactions t
             JOIN labels l ON t.transaction_id = l.transaction_id
             JOIN features f ON t.transaction_id = f.transaction_id
             CROSS JOIN latest
-            WHERE julianday(latest.max_timestamp) - julianday(t.timestamp) >= :maturity_days
+            WHERE l.is_mature = 1 AND julianday(latest.max_timestamp) - julianday(t.timestamp) >= :maturity_days
             ORDER BY t.timestamp, t.transaction_id
             """,
             connection,
@@ -114,17 +108,12 @@ def split_temporally(frame: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, p
         raise ValueError("Need at least three rows to create train, validation, and test splits.")
 
     positive_positions = np.flatnonzero(frame["is_fraud"].to_numpy(dtype=int) == 1)
-    if len(positive_positions) >= 3:
-        train_positive_index = max(0, int(len(positive_positions) * 0.60) - 1)
-        validation_positive_index = max(train_positive_index + 1, int(len(positive_positions) * 0.80) - 1)
-
-        if validation_positive_index >= len(positive_positions):
-            validation_positive_index = len(positive_positions) - 1
-        if train_positive_index >= validation_positive_index:
-            train_positive_index = max(0, validation_positive_index - 1)
-
-        train_end = int(positive_positions[train_positive_index]) + 1
-        validation_end = int(positive_positions[validation_positive_index]) + 1
+    if len(positive_positions) >= 1:
+        train_end = max(1, int(positive_positions[0]) + 1)
+        if len(positive_positions) >= 2:
+            validation_end = max(train_end + 1, int(positive_positions[1]) + 1)
+        else:
+            validation_end = max(train_end + 1, int(len(frame) * (TRAIN_FRACTION + VALIDATION_FRACTION)))
     else:
         train_end = max(1, int(len(frame) * TRAIN_FRACTION))
         validation_end = max(train_end + 1, int(len(frame) * (TRAIN_FRACTION + VALIDATION_FRACTION)))

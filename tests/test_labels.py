@@ -20,7 +20,7 @@ class LabelGenerationTests(TestCase):
             with sqlite3.connect(db_path) as connection:
                 count = connection.execute("SELECT COUNT(*) FROM labels").fetchone()[0]
                 min_delay, max_delay, avg_delay = connection.execute(
-                    "SELECT MIN(delay_days), MAX(delay_days), AVG(delay_days) FROM labels"
+                    "SELECT MIN(label_delay_hours), MAX(label_delay_hours), AVG(label_delay_hours) FROM labels"
                 ).fetchone()
                 violations = connection.execute(
                     """
@@ -32,10 +32,10 @@ class LabelGenerationTests(TestCase):
                 ).fetchone()[0]
 
             self.assertEqual(count, 1_000)
-            self.assertGreaterEqual(min_delay, 3.0)
-            self.assertLessEqual(max_delay, 7.0)
-            self.assertGreaterEqual(avg_delay, 4.5)
-            self.assertLessEqual(avg_delay, 5.5)
+            self.assertGreaterEqual(min_delay, 72.0)
+            self.assertLessEqual(max_delay, 168.0)
+            self.assertGreaterEqual(avg_delay, 90.0)
+            self.assertLessEqual(avg_delay, 150.0)
             self.assertEqual(violations, 0)
             self.assertEqual(report["n_labels"], 1_000)
 

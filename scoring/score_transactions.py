@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from fraud_risk.config import MODEL_VERSION, RISK_THRESHOLDS, SCORE_DECISIONS
 from training.common import FEATURE_COLUMNS, ensure_directories
 
 
@@ -18,11 +19,11 @@ MODEL_PATH = Path("artifacts/models/production_model.pkl")
 
 
 def get_risk_band(score: float) -> str:
-    if score >= 0.9:
+    if score >= RISK_THRESHOLDS["CRITICAL"]:
         return "CRITICAL"
-    if score >= 0.7:
+    if score >= RISK_THRESHOLDS["HIGH"]:
         return "HIGH"
-    if score >= 0.3:
+    if score >= RISK_THRESHOLDS["MEDIUM"]:
         return "MEDIUM"
     return "LOW"
 
@@ -55,23 +56,25 @@ def _load_scoring_frame(connection: sqlite3.Connection) -> pd.DataFrame:
     frame = pd.read_sql_query(
         """
         SELECT
-            t.transaction_id,
-            t.timestamp,
-            t.user_id,
-            t.merchant_id,
-            t.amount,
+            f.transaction_id,
+            f.user_txn_count_1h,
             f.user_txn_count_24h,
-            f.user_amount_sum_7d,
-            f.merchant_fraud_rate_30d,
-            f.amount_zscore,
+            f.user_avg_amount_7d,
+            f.user_amount_zscore_7d,
+            f.user_unique_merchants_24h,
+            f.merchant_txn_count_1h,
+            f.device_user_count_24h,
+            f.is_new_device_for_user,
+            f.city_change_flag_24h,
+            f.amount,
             f.hour_of_day,
-            f.is_first_merchant
-        FROM transactions t
-        JOIN features f ON t.transaction_id = f.transaction_id
-        ORDER BY t.timestamp, t.transaction_id
+            f.is_weekend,
+            f.is_international
+        FROM features f
+        ORDER BY f.feature_timestamp, f.transaction_id
         """,
         connection,
-        parse_dates=["timestamp"],
+        parse_dates=[],
     )
 
     if frame.empty:
@@ -101,21 +104,21 @@ def score_transactions(db_path: str = "data/fraud_risk.db") -> dict:
         for index, row in enumerate(frame.itertuples(index=False)):
             feature_values = np.array([getattr(row, column) for column in FEATURE_COLUMNS], dtype=float)
             score = float(scores[index])
+            risk_band = get_risk_band(score)
             scored_rows.append(
                 {
                     "transaction_id": row.transaction_id,
-                    "score": score,
-                    "risk_band": get_risk_band(score),
-                    "reason_code_1": None,
-                    "reason_code_2": None,
-                    "reason_code_3": None,
+                    "fraud_score": score,
+                    "risk_band": risk_band,
+                    "decision": SCORE_DECISIONS[risk_band],
+                    "reason_codes": None,
+                    "model_version": MODEL_VERSION,
                     "score_timestamp": score_timestamp,
                 }
             )
 
         for row, feature_values in zip(scored_rows, frame[FEATURE_COLUMNS].to_numpy(dtype=float)):
-            reason_codes = get_reason_codes(model, feature_values)
-            row["reason_code_1"], row["reason_code_2"], row["reason_code_3"] = reason_codes
+            row["reason_codes"] = json.dumps(get_reason_codes(model, feature_values))
 
         scores_df = pd.DataFrame(scored_rows)
 
@@ -125,12 +128,13 @@ def score_transactions(db_path: str = "data/fraud_risk.db") -> dict:
     report = {
         "n_scored": int(len(scores_df)),
         "risk_band_distribution": {key: int(value) for key, value in scores_df["risk_band"].value_counts().to_dict().items()},
+        "decision_distribution": {key: int(value) for key, value in scores_df["decision"].value_counts().to_dict().items()},
         "score_stats": {
-            "mean": float(scores_df["score"].mean()),
-            "std": float(scores_df["score"].std(ddof=0)),
-            "min": float(scores_df["score"].min()),
-            "max": float(scores_df["score"].max()),
-            "p95": float(np.percentile(scores_df["score"], 95)),
+            "mean": float(scores_df["fraud_score"].mean()),
+            "std": float(scores_df["fraud_score"].std(ddof=0)),
+            "min": float(scores_df["fraud_score"].min()),
+            "max": float(scores_df["fraud_score"].max()),
+            "p95": float(np.percentile(scores_df["fraud_score"], 95)),
         },
         "status": "scored",
     }

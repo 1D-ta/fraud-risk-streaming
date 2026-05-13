@@ -23,7 +23,7 @@ def inject_label_delay_spike(db_path: str = "data/fraud_risk.db", seed: int = 42
     with sqlite3.connect(db_path) as connection:
         connection.execute("PRAGMA foreign_keys = ON;")
         labels = pd.read_sql_query(
-            "SELECT transaction_id, is_fraud, label_timestamp, delay_days FROM labels ORDER BY label_timestamp, transaction_id",
+            "SELECT transaction_id, is_fraud, label_timestamp, label_delay_hours FROM labels ORDER BY label_timestamp, transaction_id",
             connection,
             parse_dates=["label_timestamp"],
         )
@@ -36,18 +36,18 @@ def inject_label_delay_spike(db_path: str = "data/fraud_risk.db", seed: int = 42
         extra_delay = rng.uniform(7.0, 14.0, size=affected_count)
 
         labels.loc[affected_indices, "label_timestamp"] = labels.loc[affected_indices, "label_timestamp"] + pd.to_timedelta(extra_delay, unit="D")
-        labels.loc[affected_indices, "delay_days"] = (labels.loc[affected_indices, "delay_days"] + extra_delay).clip(upper=7.0)
+        labels.loc[affected_indices, "label_delay_hours"] = labels.loc[affected_indices, "label_delay_hours"] + (extra_delay * 24.0)
 
         update_rows = [
             (
                 pd.Timestamp(row.label_timestamp).floor("s").isoformat(),
-                float(row.delay_days),
+                float(row.label_delay_hours),
                 row.transaction_id,
             )
             for row in labels.itertuples(index=False)
         ]
         connection.executemany(
-            "UPDATE labels SET label_timestamp = ?, delay_days = ? WHERE transaction_id = ?",
+            "UPDATE labels SET label_timestamp = ?, label_delay_hours = ? WHERE transaction_id = ?",
             update_rows,
         )
 
@@ -62,8 +62,8 @@ def inject_label_delay_spike(db_path: str = "data/fraud_risk.db", seed: int = 42
         "prevention": "Monitor label arrival rate and p95 delay",
         "affected_labels": int(affected_count),
         "extra_delay_days_added_mean": float(extra_delay.mean()),
-        "median_delay_days": float(labels["delay_days"].median()),
-        "p95_delay_days": float(labels["delay_days"].quantile(0.95)),
+        "median_delay_hours": float(labels["label_delay_hours"].median()),
+        "p95_delay_hours": float(labels["label_delay_hours"].quantile(0.95)),
         "status": "injected",
     }
 
@@ -83,7 +83,7 @@ def main() -> None:
     report = inject_label_delay_spike(db_path=args.db_path, seed=args.seed)
     print("Injected label delay spike")
     print(f"Affected labels: {report['affected_labels']}")
-    print(f"Median delay: {report['median_delay_days']:.2f} days")
+    print(f"Median delay: {report['median_delay_hours'] / 24.0:.2f} days")
 
 
 if __name__ == "__main__":

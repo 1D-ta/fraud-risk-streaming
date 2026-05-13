@@ -17,7 +17,7 @@ def performance_report(db_path: str = "data/fraud_risk.db", top_k: int = 100) ->
     with sqlite3.connect(db_path) as conn:
         df = pd.read_sql_query(
             """
-            SELECT t.transaction_id, t.timestamp, l.is_fraud, s.score
+            SELECT t.transaction_id, t.timestamp, l.is_fraud, s.fraud_score
             FROM transactions t
             JOIN labels l ON t.transaction_id = l.transaction_id
             JOIN scores s ON t.transaction_id = s.transaction_id
@@ -31,7 +31,7 @@ def performance_report(db_path: str = "data/fraud_risk.db", top_k: int = 100) ->
         raise ValueError("No labeled scored transactions available. Run scoring and label backfill first.")
 
     y_true = df["is_fraud"].astype(int)
-    y_score = df["score"].astype(float)
+    y_score = df["fraud_score"].astype(float)
 
     results: Dict[str, float] = {}
 

@@ -19,6 +19,7 @@ from scoring.score_transactions import score_transactions
 from simulation.generate_labels import generate_labels
 from simulation.generate_transactions import generate_transactions
 from simulation.init_db import init_database
+from fraud_risk.config import REVIEW_CAPACITY, TOP_K_REVIEW
 from training.evaluate_model import evaluate_models
 from training.train_model import train_models
 
@@ -28,8 +29,8 @@ def run_demo(
     num_transactions: int = 2_000,
     fraud_rate: float = 0.02,
     seed: int = 42,
-    capacity: int = 100,
-    top_k: int = 100,
+    capacity: int = REVIEW_CAPACITY,
+    top_k: int = TOP_K_REVIEW,
     reset: bool = False,
 ) -> dict:
     """Execute the end-to-end pipeline and collect a compact summary."""
@@ -84,8 +85,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-transactions", type=int, default=2_000, help="Number of synthetic transactions")
     parser.add_argument("--fraud-rate", type=float, default=0.02, help="Target fraud rate")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
-    parser.add_argument("--capacity", type=int, default=100, help="Manual review capacity")
-    parser.add_argument("--top-k", type=int, default=100, help="Top-k metric cutoff")
+    parser.add_argument("--capacity", type=int, default=REVIEW_CAPACITY, help="Manual review capacity")
+    parser.add_argument("--top-k", type=int, default=TOP_K_REVIEW, help="Top-k metric cutoff")
     parser.add_argument("--reset", action="store_true", help="Delete the existing database before running")
     return parser.parse_args()
 

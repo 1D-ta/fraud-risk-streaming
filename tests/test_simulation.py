@@ -37,7 +37,7 @@ class SimulationTests(TestCase):
 
             with sqlite3.connect(db_path) as connection:
                 count = connection.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
-                fraud_count = connection.execute("SELECT SUM(is_fraud) FROM transactions").fetchone()[0]
+                fraud_count = connection.execute("SELECT COUNT(*) FROM transactions WHERE fraud_pattern IS NOT NULL").fetchone()[0]
 
             self.assertEqual(report["n_transactions"], 500)
             self.assertEqual(report["n_fraud"], 10)

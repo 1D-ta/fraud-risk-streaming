@@ -9,8 +9,10 @@ from pathlib import Path
 
 import pandas as pd
 
+from fraud_risk.config import REVIEW_CAPACITY
 
-def build_review_queue(db_path: str = "data/fraud_risk.db", capacity: int = 100) -> dict:
+
+def build_review_queue(db_path: str = "data/fraud_risk.db", capacity: int = REVIEW_CAPACITY) -> dict:
     with sqlite3.connect(db_path) as connection:
         connection.execute("PRAGMA foreign_keys = ON;")
 
@@ -18,46 +20,39 @@ def build_review_queue(db_path: str = "data/fraud_risk.db", capacity: int = 100)
             """
             SELECT
                 s.transaction_id,
-                s.score,
+                s.fraud_score,
                 s.risk_band,
-                t.is_fraud,
+                s.decision,
+                l.is_fraud,
                 t.amount,
                 t.user_id,
                 t.merchant_id
             FROM scores s
             JOIN transactions t ON s.transaction_id = t.transaction_id
+            JOIN labels l ON s.transaction_id = l.transaction_id
             WHERE s.risk_band IN ('HIGH', 'CRITICAL')
-            ORDER BY s.score DESC, s.transaction_id
+            ORDER BY s.fraud_score DESC, s.transaction_id
             """,
             connection,
         )
 
         if scored.empty:
             review_queue = pd.DataFrame(
-                columns=["transaction_id", "score", "risk_band", "queue_timestamp", "capacity_exceeded", "review_status"]
+                columns=["transaction_id", "review_batch_id", "fraud_score", "review_rank", "decision", "capacity_limit"]
             )
             queue_size = 0
             overflow_size = 0
+            review_batch_id = pd.Timestamp.utcnow().floor("s").isoformat()
         else:
-            queue_df = scored.head(capacity).copy()
-            queue_df["capacity_exceeded"] = 0
-            queue_df["review_status"] = "PENDING"
-
-            overflow_df = scored.iloc[capacity:].copy()
-            if not overflow_df.empty:
-                overflow_df["capacity_exceeded"] = 1
-                overflow_df["review_status"] = "AUTO_APPROVED"
-
-            review_queue = pd.concat(
-                [queue_df[["transaction_id", "score", "risk_band", "capacity_exceeded", "review_status"]], overflow_df[["transaction_id", "score", "risk_band", "capacity_exceeded", "review_status"]]],
-                ignore_index=True,
-            )
-            queue_size = int(len(queue_df))
-            overflow_size = int(len(overflow_df))
-
-        review_queue["queue_timestamp"] = pd.Timestamp.utcnow().isoformat() if not review_queue.empty else None
-
-        review_queue = review_queue[["transaction_id", "score", "risk_band", "queue_timestamp", "capacity_exceeded", "review_status"]]
+            review_batch_id = pd.Timestamp.utcnow().floor("s").isoformat()
+            review_queue = scored.head(capacity).copy().reset_index(drop=True)
+            review_queue["review_batch_id"] = review_batch_id
+            review_queue["review_rank"] = review_queue.index.astype(int)
+            review_queue["capacity_limit"] = int(capacity)
+            review_queue["decision"] = "manual_review"
+            review_queue = review_queue[["transaction_id", "review_batch_id", "fraud_score", "review_rank", "decision", "capacity_limit"]]
+            queue_size = int(len(review_queue))
+            overflow_size = int(max(0, len(scored) - queue_size))
 
         connection.execute("DELETE FROM review_queue")
         if not review_queue.empty:
@@ -66,7 +61,7 @@ def build_review_queue(db_path: str = "data/fraud_risk.db", capacity: int = 100)
         queue_precision = 0.0
         if queue_size > 0:
             queue_precision = float(
-                review_queue.head(queue_size).merge(
+                review_queue.merge(
                     scored[["transaction_id", "is_fraud"]],
                     on="transaction_id",
                     how="left",
@@ -81,6 +76,7 @@ def build_review_queue(db_path: str = "data/fraud_risk.db", capacity: int = 100)
         "capacity": capacity,
         "capacity_exceeded_rate": float(overflow_size / total_high_risk) if total_high_risk else 0.0,
         "queue_precision_estimate": queue_precision,
+        "review_batch_id": review_batch_id,
         "status": "queued",
     }
 
@@ -95,7 +91,7 @@ def build_review_queue(db_path: str = "data/fraud_risk.db", capacity: int = 100)
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the fraud review queue.")
     parser.add_argument("--db-path", default="data/fraud_risk.db", help="Path to the SQLite database file")
-    parser.add_argument("--capacity", type=int, default=100, help="Review queue capacity")
+    parser.add_argument("--capacity", type=int, default=REVIEW_CAPACITY, help="Review queue capacity")
     return parser.parse_args()
 
 

@@ -64,9 +64,9 @@ def drift_report(db_path: str = "data/fraud_risk.db") -> Dict[str, float]:
         report[col + "_psi"] = val
 
     # score drift if scores present
-    if not scores.empty and "score" in scores.columns:
+    if not scores.empty and "fraud_score" in scores.columns:
         # align scores by transaction order
-        score_vals = scores["score"].to_numpy(dtype=float)
+        score_vals = scores["fraud_score"].to_numpy(dtype=float)
         mid = max(1, int(len(score_vals) * 0.7))
         report["score_psi"] = _psi(score_vals[:mid], score_vals[mid:], bins=10)
     else:

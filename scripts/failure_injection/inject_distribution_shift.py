@@ -21,9 +21,12 @@ def inject_distribution_shift(db_path: str = "data/fraud_risk.db", amount_multip
         frame = pd.read_sql_query(
             """
             SELECT f.transaction_id, t.timestamp, t.amount,
-                   f.user_txn_count_24h, f.user_amount_sum_7d,
-                   f.merchant_fraud_rate_30d, f.amount_zscore,
-                   f.hour_of_day, f.is_first_merchant
+                 f.user_txn_count_1h, f.user_txn_count_24h,
+                 f.user_avg_amount_7d, f.user_amount_zscore_7d,
+                 f.user_unique_merchants_24h, f.merchant_txn_count_1h,
+                 f.device_user_count_24h, f.is_new_device_for_user,
+                 f.city_change_flag_24h, f.amount,
+                 f.hour_of_day, f.is_weekend, f.is_international
             FROM features f
             JOIN transactions t ON f.transaction_id = t.transaction_id
             ORDER BY t.timestamp, f.transaction_id
@@ -41,10 +44,12 @@ def inject_distribution_shift(db_path: str = "data/fraud_risk.db", amount_multip
             affected = frame.tail(max(1, len(frame) // 5)).copy()
 
         affected["amount"] = affected["amount"] * amount_multiplier
-        affected["user_amount_sum_7d"] = affected["user_amount_sum_7d"] * amount_multiplier
-        affected["amount_zscore"] = affected["amount_zscore"] + 4.0
-        affected["merchant_fraud_rate_30d"] = affected["merchant_fraud_rate_30d"].clip(upper=1.0)
-        affected["user_txn_count_24h"] = affected["user_txn_count_24h"] + 2
+        affected["user_avg_amount_7d"] = affected["user_avg_amount_7d"] * amount_multiplier
+        affected["user_amount_zscore_7d"] = affected["user_amount_zscore_7d"] + 4.0
+        affected["user_txn_count_1h"] = affected["user_txn_count_1h"] + 2
+        affected["user_txn_count_24h"] = affected["user_txn_count_24h"] + 4
+        affected["user_unique_merchants_24h"] = affected["user_unique_merchants_24h"] + 1
+        affected["merchant_txn_count_1h"] = affected["merchant_txn_count_1h"] + 2
 
         transaction_rows = [
             (float(row.amount), row.transaction_id)
@@ -52,12 +57,19 @@ def inject_distribution_shift(db_path: str = "data/fraud_risk.db", amount_multip
         ]
         feature_rows = [
             (
+                int(row.user_txn_count_1h),
                 int(row.user_txn_count_24h),
-                float(row.user_amount_sum_7d),
-                float(row.merchant_fraud_rate_30d),
-                float(row.amount_zscore),
+                float(row.user_avg_amount_7d),
+                float(row.user_amount_zscore_7d),
+                int(row.user_unique_merchants_24h),
+                int(row.merchant_txn_count_1h),
+                int(row.device_user_count_24h),
+                int(row.is_new_device_for_user),
+                int(row.city_change_flag_24h),
+                float(row.amount),
                 int(row.hour_of_day),
-                int(row.is_first_merchant),
+                int(row.is_weekend),
+                int(row.is_international),
                 row.transaction_id,
             )
             for row in affected.itertuples(index=False)
@@ -70,12 +82,19 @@ def inject_distribution_shift(db_path: str = "data/fraud_risk.db", amount_multip
         connection.executemany(
             """
             UPDATE features
-            SET user_txn_count_24h = ?,
-                user_amount_sum_7d = ?,
-                merchant_fraud_rate_30d = ?,
-                amount_zscore = ?,
+            SET user_txn_count_1h = ?,
+                user_txn_count_24h = ?,
+                user_avg_amount_7d = ?,
+                user_amount_zscore_7d = ?,
+                user_unique_merchants_24h = ?,
+                merchant_txn_count_1h = ?,
+                device_user_count_24h = ?,
+                is_new_device_for_user = ?,
+                city_change_flag_24h = ?,
+                amount = ?,
                 hour_of_day = ?,
-                is_first_merchant = ?
+                is_weekend = ?,
+                is_international = ?
             WHERE transaction_id = ?
             """,
             feature_rows,
