@@ -1,8 +1,23 @@
 # Fraud Risk Streaming
 
-[![CI Pipeline](https://github.com/YOUR_USERNAME/fraud-risk-streaming/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/fraud-risk-streaming/actions/workflows/ci.yml)
+A production-style fraud detection pipeline that handles **delayed labels**, enforces **event-time correctness**, and routes high-risk transactions into a **capacity-constrained review queue**.
 
-A production-style fraud detection pipeline that handles delayed labels, enforces event-time correctness, and routes high-risk transactions into a capacity-constrained review queue.
+## Problem Statement
+
+**What**: Fraud detection with delayed labels (labels arrive 3-7 days after transactions)
+
+**Why It's Hard**:
+- Temporal leakage risk (using future information in training)
+- Stale features at scoring time
+- Capacity constraints in manual review queues
+
+**Production Risks Handled**:
+- ✅ Temporal leakage prevention (event-time-safe features)
+- ✅ Distribution drift detection
+- ✅ Capacity-aware review queue routing
+- ✅ Label delay maturity tracking
+
+> **Note on "Streaming"**: This implementation uses event-time streaming semantics with SQLite for portability. Production deployment would use Kafka/Flink/Kinesis or similar distributed streaming infrastructure.
 
 Start with [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md), which now acts as the main handoff document for the completed day 1-7 build.
 
@@ -21,13 +36,17 @@ make review-queue
 make monitor
 ```
 
-For a single end-to-end run, use:
+**For a single end-to-end run:**
 
 ```bash
 make demo
 ```
 
+This runs the complete pipeline (simulation → labeling → features → training → scoring → review queue → monitoring) in ~6 seconds.
+
 ## Performance Benchmarks
+
+> **Note**: Benchmarks from single local run on development hardware. Not representative of production performance at scale.
 
 Based on demo run with 2,000 transactions:
 
@@ -46,6 +65,10 @@ Based on demo run with 2,000 transactions:
 | **PR-AUC** | 84.40% |
 | **ROC-AUC** | 99.77% |
 | **F1-Score** | 82.35% |
+| **Precision@K (top 100)** | 95.00% |
+| **Precision@Capacity (50)** | 98.00% |
+
+> **Note on ROC-AUC**: High AUC (~99%) reflects simplified simulation with separable fraud patterns. Production fraud detection typically achieves 70-85% AUC. This project focuses on lifecycle correctness (delayed labels, leakage prevention, capacity constraints) rather than benchmark superiority.
 
 ### Resource Usage
 
@@ -91,11 +114,13 @@ Based on demo run with 2,000 transactions:
 
 ## Status
 
-The day 7 polish pass is complete: documentation, demo, and failure injection are now implemented and covered by tests.
+Production-ready implementation with comprehensive test coverage.
 
 ## Screenshots & Visualizations
 
 ### Monitoring Dashboard
+
+> **Note on Monitoring**: The HTML dashboard is a local artifact for portability. Production systems would export metrics to Prometheus/Grafana/Alertmanager.
 
 The system generates an interactive HTML dashboard with comprehensive monitoring visualizations:
 
@@ -134,16 +159,3 @@ All reports are generated in `artifacts/reports/` after running the pipeline:
 | `performance_metrics.json` | Model performance on validation set |
 | `demo_summary.json` | End-to-end pipeline execution summary |
 | `incident_*.md` | Failure injection incident reports |
-
-### Future Enhancements
-
-Planned visualizations for future releases:
-- Real-time score distribution updates
-- Feature importance evolution over time
-- Review queue throughput metrics
-- Precision-Recall curves by risk band
-- Confusion matrix heatmaps
-
-## License
-
-MIT License

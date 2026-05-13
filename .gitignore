@@ -52,6 +52,8 @@ htmlcov/
 artifacts/models/*.pkl
 artifacts/models/*.joblib
 artifacts/reports/*.json
+artifacts/reports/*.html
+artifacts/reports/incident_*.md
 artifacts/screenshots/*.png
 
 # Logs
@@ -66,5 +68,3 @@ logs/
 *.tmp
 *.bak
 *.swp
-
-# Made with Bob

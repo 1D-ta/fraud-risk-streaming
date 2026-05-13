@@ -333,5 +333,3 @@ class EdgeCaseTests(TestCase):
                 self.assertEqual(features[6], 0)  # device_user_count_24h
                 self.assertEqual(features[7], 1)  # is_new_device_for_user (should be 1)
                 self.assertEqual(features[8], 0)  # city_change_flag_24h
-
-# Made with Bob

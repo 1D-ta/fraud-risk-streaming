@@ -413,5 +413,3 @@ class IntegrationTests(TestCase):
                 train_report_1["dataset"]["n_rows"],
                 train_report_2["dataset"]["n_rows"]
             )
-
-# Made with Bob

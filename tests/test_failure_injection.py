@@ -48,8 +48,8 @@ class FailureInjectionTests(TestCase):
                 incident_text = incident_path.read_text(encoding="utf-8")
                 self.assertIn("Incident 1: Label Delay Spike", incident_text)
                 self.assertIn("Incident 2: Feature Lag", incident_text)
-                self.assertIn("Incident 3: False Positive Burst", incident_text)
-                self.assertIn("Incident 4: Leakage Bug", incident_text)
+                self.assertIn("Incident 3: Distribution Shift", incident_text)
+                self.assertIn("Incident 4: Label Leakage", incident_text)
 
                 leakage_check = check_leakage(db_path=str(db_path))
                 self.assertEqual(leakage_check["leakage_check"], "PASS")
