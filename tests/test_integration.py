@@ -18,6 +18,7 @@ from scoring.score_transactions import score_transactions
 from simulation.generate_labels import generate_labels
 from simulation.generate_transactions import generate_transactions
 from training.train_model import train_models
+from training.evaluate_model import evaluate_models
 
 
 class IntegrationTests(TestCase):
@@ -63,6 +64,11 @@ class IntegrationTests(TestCase):
             # Verify model file exists
             model_path = Path(train_report["candidate_models"]["logistic_regression"]["artifact_path"])
             self.assertTrue(model_path.exists())
+            
+            # Step 4b: Evaluate and select production model
+            eval_report = evaluate_models(db_path=str(db_path), maturity_days=0)
+            self.assertEqual(eval_report["status"], "evaluated")
+            self.assertTrue(Path(eval_report["best_model"]["production_artifact"]).exists())
             
             # Step 5: Score transactions
             score_report = score_transactions(db_path=str(db_path))
@@ -227,6 +233,7 @@ class IntegrationTests(TestCase):
             # First run
             feature_report_1 = build_features(db_path=str(db_path))
             train_models(db_path=str(db_path), maturity_days=0)
+            evaluate_models(db_path=str(db_path), maturity_days=0)
             score_report_1 = score_transactions(db_path=str(db_path))
             
             # Get first run results
@@ -349,6 +356,7 @@ class IntegrationTests(TestCase):
             
             # Train initial model
             train_report_1 = train_models(db_path=str(db_path), maturity_days=0)
+            evaluate_models(db_path=str(db_path), maturity_days=0)
             model_path = Path(train_report_1["candidate_models"]["logistic_regression"]["artifact_path"])
             
             # Load and verify initial model
@@ -385,6 +393,7 @@ class IntegrationTests(TestCase):
             
             # Retrain model with expanded dataset
             train_report_2 = train_models(db_path=str(db_path), maturity_days=0)
+            evaluate_models(db_path=str(db_path), maturity_days=0)
             
             # Load retrained model
             with open(model_path, "rb") as f:

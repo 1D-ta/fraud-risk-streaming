@@ -22,7 +22,27 @@ Wait for the delayed labels to arrive, or retrain on the mature subset once the 
 ### Prevention
 Track mature-label coverage and p95 label delay before each training run.
 
-## Incident 2: Distribution Shift (Simulated)
+## Incident 2: Feature Lag (Simulated)
+
+**Severity:** MEDIUM  
+**Date:** 2026-05-13
+
+### Symptom
+Newest transactions have zeroed velocity features because the feature pipeline lagged behind the event stream.
+
+### Detection
+Feature freshness monitoring shows old feature timestamps. Affected transactions lack recent aggregates.
+
+### Impact
+Recent fraud is under-scored because velocity-based signals are stale. Model recall drops on newest transactions.
+
+### Mitigation
+Backfill the missing feature window and re-score affected transactions.
+
+### Prevention
+Implement automated lag detection and backfill triggers. Monitor feature freshness continuously.
+
+## Incident 3: Distribution Shift (Simulated)
 
 **Severity:** HIGH  
 **Date:** 2026-05-13
@@ -42,7 +62,7 @@ Temporarily raise the threshold, review the shifted window manually, and retrain
 ### Prevention
 Keep PSI monitoring in the pipeline and retrain on recent seasonal data before expected volume changes.
 
-## Incident 3: Temporal Leakage (Simulated)
+## Incident 4: Label Leakage (Simulated)
 
 **Severity:** CRITICAL  
 **Date:** 2026-05-13
