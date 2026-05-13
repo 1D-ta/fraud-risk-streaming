@@ -1,6 +1,6 @@
 PYTHON := .venv/bin/python
 
-.PHONY: help setup init-db simulate backfill-labels analyze-maturity build-features check-leakage clean
+.PHONY: help setup init-db simulate backfill-labels analyze-maturity build-features check-leakage train evaluate score review-queue clean
 
 help:
 	@echo "Fraud Risk Streaming - Makefile Commands"
@@ -15,6 +15,10 @@ help:
 	@echo "  make analyze-maturity  Analyze label maturity"
 	@echo "  make build-features  Build event-time features"
 	@echo "  make check-leakage  Verify feature temporal correctness"
+	@echo "  make train       Train baseline fraud models"
+	@echo "  make evaluate    Evaluate models and save production artifact"
+	@echo "  make score       Score transactions with production model"
+	@echo "  make review-queue  Build capacity-constrained review queue"
 	@echo ""
 	@echo "Utility:"
 	@echo "  make clean       Remove generated database and reports"
@@ -42,5 +46,17 @@ build-features:
 check-leakage:
 	$(PYTHON) -m features.check_leakage
 
+train:
+	$(PYTHON) -m training.train_model
+
+evaluate:
+	$(PYTHON) -m training.evaluate_model
+
+score:
+	$(PYTHON) -m scoring.score_transactions
+
+review-queue:
+	$(PYTHON) -m review.build_queue
+
 clean:
-	rm -f data/fraud_risk.db artifacts/reports/*.json
+	rm -f data/fraud_risk.db artifacts/reports/*.json artifacts/models/*.pkl

@@ -356,15 +356,15 @@ fraud-risk-streaming/
 
 **Goal:** Train initial fraud detection model
 
-- [ ] Implement training pipeline
+- [x] Implement training pipeline
   - Join transactions + labels + features
   - Train/validation/test split (temporal)
   - Model training (Logistic Regression baseline)
-- [ ] Model evaluation
+- [x] Model evaluation
   - Precision, Recall, F1 at various thresholds
   - ROC curve, PR curve
   - Calibration analysis
-- [ ] Save model artifacts
+- [x] Save model artifacts
   - Model file (.pkl)
   - Training metadata (features used, metrics)
   - Feature importance
@@ -379,23 +379,23 @@ fraud-risk-streaming/
 
 **Goal:** Real-time inference with review routing
 
-- [ ] Implement scoring service
+- [x] Implement scoring service
   - Load trained model
   - Compute features for new transaction
   - Generate fraud score
   - Route to review if score > threshold
-- [ ] Review queue management
+- [x] Review queue management
   - Priority queue (sorted by score)
   - Capacity constraints (max N per day)
   - Track review outcomes
-- [ ] Performance optimization
+- [x] Performance optimization
   - Feature caching
   - Batch scoring
 
 **Deliverables:**
-- `scoring/score_transaction.py`
-- `review/review_queue.py`
-- `tests/test_scoring_latency.py`
+- `scoring/score_transactions.py`
+- `review/build_queue.py`
+- `tests/test_scoring.py`
 
 ### Day 6: Monitoring & Drift Detection
 
@@ -452,6 +452,11 @@ fraud-risk-streaming/
 - [x] PROJECT_GUIDE.md written
 - [x] .gitignore configured
 - [x] README.md created
+- [x] Day 1 transaction simulation implemented
+- [x] Day 2 delayed label generation implemented
+- [x] Day 3 event-time feature engineering implemented
+- [x] Day 4 training pipeline implemented
+- [x] Day 5 scoring and review queue implemented
 
 ### 🚧 In Progress
 
@@ -459,13 +464,13 @@ fraud-risk-streaming/
 
 ### 📋 Next Up
 
-- [ ] Implement transaction simulator
-- [ ] Create database schema
-- [ ] Generate initial dataset
+- [ ] Add monitoring and drift detection
+- [ ] Add performance tracking and drift alerts
+- [ ] Add review queue observability
 
 ### 🎯 Milestone Progress
 
-**MVP Progress: 5% Complete** (Day 1 of 7)
+**MVP Progress: 71% Complete** (Day 5 of 7)
 
 ---
 
