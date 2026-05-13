@@ -1,5 +1,7 @@
 # Fraud Risk Streaming
 
+[![CI Pipeline](https://github.com/YOUR_USERNAME/fraud-risk-streaming/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/fraud-risk-streaming/actions/workflows/ci.yml)
+
 A production-style fraud detection pipeline that handles delayed labels, enforces event-time correctness, and routes high-risk transactions into a capacity-constrained review queue.
 
 Start with [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md), which now acts as the main handoff document for the completed day 1-7 build.

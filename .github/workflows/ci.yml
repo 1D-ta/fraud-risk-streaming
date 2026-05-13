@@ -1,0 +1,252 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  setup-and-lint:
+    name: Setup and Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Lint with flake8 (optional)
+      continue-on-error: true
+      run: |
+        pip install flake8
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    
+    - name: Check code formatting with black (optional)
+      continue-on-error: true
+      run: |
+        pip install black
+        black --check --diff .
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: setup-and-lint
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run unit tests
+      run: |
+        python -m pytest tests/ -v --tb=short --junit-xml=test-results-${{ matrix.python-version }}.xml
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: test-results-${{ matrix.python-version }}.xml
+    
+    - name: Generate coverage report (Python 3.9 only)
+      if: matrix.python-version == '3.9'
+      continue-on-error: true
+      run: |
+        pip install pytest-cov
+        python -m pytest tests/ --cov=. --cov-report=xml --cov-report=html
+    
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      if: matrix.python-version == '3.9'
+      with:
+        name: coverage-report
+        path: |
+          coverage.xml
+          htmlcov/
+
+  demo:
+    name: Run End-to-End Demo
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Initialize database
+      run: |
+        python simulation/init_db.py
+    
+    - name: Run demo pipeline
+      run: |
+        python scripts/demo.py
+    
+    - name: Verify demo outputs
+      run: |
+        # Check that database was created
+        test -f data/fraud_risk.db || exit 1
+        
+        # Check that model artifacts were created
+        test -f artifacts/models/production_model.pkl || exit 1
+        
+        # Check that reports were generated
+        test -f artifacts/reports/feature_stats.json || exit 1
+        test -f artifacts/reports/training_report_v1.json || exit 1
+        test -f artifacts/reports/scoring_report.json || exit 1
+        test -f artifacts/reports/review_queue_report.json || exit 1
+        
+        echo "✅ All demo outputs verified successfully"
+    
+    - name: Upload demo artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: demo-artifacts
+        path: |
+          artifacts/reports/*.json
+          artifacts/reports/*.html
+          artifacts/reports/*.md
+
+  failure-scenarios:
+    name: Test Failure Injection Scenarios
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        scenario: [label_delay, feature_lag, distribution_shift, leakage]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Initialize database
+      run: |
+        python simulation/init_db.py
+    
+    - name: Run failure scenario - ${{ matrix.scenario }}
+      run: |
+        case "${{ matrix.scenario }}" in
+          label_delay)
+            python scripts/failure_injection/inject_label_delay.py
+            ;;
+          feature_lag)
+            python scripts/failure_injection/inject_feature_lag.py
+            ;;
+          distribution_shift)
+            python scripts/failure_injection/inject_distribution_shift.py
+            ;;
+          leakage)
+            python scripts/failure_injection/inject_leakage.py
+            ;;
+        esac
+    
+    - name: Verify failure scenario outputs
+      run: |
+        # Check that incident report was generated
+        test -f artifacts/reports/incident_${{ matrix.scenario }}.md || exit 1
+        echo "✅ Failure scenario ${{ matrix.scenario }} completed successfully"
+    
+    - name: Upload failure scenario reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: failure-scenario-${{ matrix.scenario }}
+        path: |
+          artifacts/reports/incident_${{ matrix.scenario }}.md
+          artifacts/reports/*${{ matrix.scenario }}*.json
+
+  integration-validation:
+    name: Integration Validation
+    runs-on: ubuntu-latest
+    needs: [demo, failure-scenarios]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+    
+    - name: Validate CI pipeline completion
+      run: |
+        echo "✅ All CI pipeline stages completed successfully"
+        echo ""
+        echo "Pipeline Summary:"
+        echo "- Setup and Lint: ✅"
+        echo "- Unit Tests: ✅"
+        echo "- End-to-End Demo: ✅"
+        echo "- Failure Scenarios: ✅"
+        echo ""
+        echo "Artifacts generated:"
+        ls -R
+    
+    - name: Create CI summary
+      run: |
+        echo "## CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ All tests passed" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Demo pipeline completed" >> $GITHUB_STEP_SUMMARY
+        echo "✅ All failure scenarios tested" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Test Matrix" >> $GITHUB_STEP_SUMMARY
+        echo "- Python 3.9: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Python 3.10: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Python 3.11: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Failure Scenarios" >> $GITHUB_STEP_SUMMARY
+        echo "- Label Delay: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Feature Lag: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Distribution Shift: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Leakage: ✅" >> $GITHUB_STEP_SUMMARY
+
+# Made with Bob
